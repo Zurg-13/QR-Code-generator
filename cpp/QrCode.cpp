@@ -113,14 +113,20 @@ QrCode::QrCode(int ver, Ecc ecl, const vector<uint8_t> &dataCodewords, int mask)
 		// Initialize fields
 		version(ver),
 		size(MIN_VERSION <= ver && ver <= MAX_VERSION ? ver * 4 + 17 : -1),  // Avoid signed overflow undefined behavior
-		errorCorrectionLevel(ecl),
-		modules(size, vector<bool>(size)),  // Entirely white grid
-		isFunction(size, vector<bool>(size)) {
-	
+        modules(size), isFunction(size),
+        errorCorrectionLevel(ecl) {
+
 	// Check arguments
 	if (ver < MIN_VERSION || ver > MAX_VERSION || mask < -1 || mask > 7)
 		throw "Value out of range";
-	
+
+
+    // Entirely white grid
+    for(int i=0; i<size; i++) {
+        std::fill(modules[i], modules[i]+size, false);
+        std::fill(isFunction[i], isFunction[i]+size, false);
+    }// i
+
 	// Draw function patterns, draw all codewords, do masking
 	drawFunctionPatterns();
 	const vector<uint8_t> allCodewords = appendErrorCorrection(dataCodewords);
@@ -130,22 +136,22 @@ QrCode::QrCode(int ver, Ecc ecl, const vector<uint8_t> &dataCodewords, int mask)
 
 
 int QrCode::getVersion() const {
-	return version;
+    return version;
 }
 
 
 int QrCode::getSize() const {
-	return size;
+    return size;
 }
 
 
 QrCode::Ecc QrCode::getErrorCorrectionLevel() const {
-	return errorCorrectionLevel;
+    return errorCorrectionLevel;
 }
 
 
 int QrCode::getMask() const {
-	return mask;
+    return mask;
 }
 
 
@@ -287,13 +293,13 @@ void QrCode::drawAlignmentPattern(int x, int y) {
 
 
 void QrCode::setFunctionModule(int x, int y, bool isBlack) {
-	modules.at(y).at(x) = isBlack;
-	isFunction.at(y).at(x) = true;
+        modules[y][x] = isBlack;
+        isFunction[y][x] = true;
 }
 
 
 bool QrCode::module(int x, int y) const {
-	return modules.at(y).at(x);
+        return modules[y][x];
 }
 
 
@@ -350,8 +356,8 @@ void QrCode::drawCodewords(const vector<uint8_t> &data) {
 				int x = right - j;  // Actual x coordinate
 				bool upward = ((right + 1) & 2) == 0;
 				int y = upward ? size - 1 - vert : vert;  // Actual y coordinate
-				if (!isFunction.at(y).at(x) && i < data.size() * 8) {
-					modules.at(y).at(x) = getBit(data.at(i >> 3), 7 - static_cast<int>(i & 7));
+                                if (!isFunction[y][x] && i < data.size() * 8) {
+                                        modules[y][x] = getBit(data.at(i >> 3), 7 - static_cast<int>(i & 7));
 					i++;
 				}
 				// If there are any remainder bits (0 to 7), they are already
@@ -381,7 +387,7 @@ void QrCode::applyMask(int mask) {
 				case 7:  invert = ((x + y) % 2 + x * y % 3) % 2 == 0;  break;
 				default:  throw "Assertion error";
 			}
-			modules.at(y).at(x) = modules.at(y).at(x) ^ (invert & !isFunction.at(y).at(x));
+                        modules[y][x] = modules[y][x] ^ (invert & !isFunction[y][x]);
 		}
 	}
 }
@@ -475,12 +481,12 @@ long QrCode::getPenaltyScore() const {
 	
 	// Balance of black and white modules
 	int black = 0;
-	for (const vector<bool> &row : modules) {
-		for (bool color : row) {
-			if (color)
-				black++;
-		}
-	}
+    for(int i=0; i<size; i++) {
+        for(int j=0; j<size; j++) {
+            if(modules[i][j]) { black++; }
+        }// j
+    }// i
+
 	int total = size * size;
 	// Find smallest k such that (45-5k)% <= dark/total <= (55+5k)%
 	for (int k = 0; black*20L < (9L-k)*total || black*20L > (11L+k)*total; k++)

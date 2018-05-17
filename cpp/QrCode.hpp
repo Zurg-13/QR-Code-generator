@@ -31,6 +31,21 @@
 
 namespace qrcodegen {
 
+class Matrix {
+
+  public:
+    const int size;
+
+    Matrix(int size): size(size), data(new bool[size*size]){}
+   ~Matrix() { delete[] data; }
+    bool* operator[](int row) { return data + row*size; }
+    const bool* operator[](int row) const { return data + row*size; }
+
+  private:
+    bool* data;
+
+};// Matrix
+
 /* 
  * Represents an immutable square grid of black and white cells for a QR Code symbol, and
  * provides static functions to create a QR Code from user-supplied textual or binary data.
@@ -52,7 +67,6 @@ class QrCode final {
 	
 	// Returns a value in the range 0 to 3 (unsigned 2-bit integer).
 	private: static int getFormatBits(Ecc ecl);
-	
 	
 	
 	/*---- Public static factory functions ----*/
@@ -85,8 +99,7 @@ class QrCode final {
 	 */
 	public: static QrCode encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
 		int minVersion=1, int maxVersion=40, int mask=-1, bool boostEcl=true);  // All optional parameters
-	
-	
+
 	
 	/*---- Public constants ----*/
 	
@@ -94,20 +107,16 @@ class QrCode final {
 	public: static constexpr int MAX_VERSION = 40;
 	
 	
-	
 	/*---- Instance fields ----*/
 	
 	// Immutable scalar parameters
 	
 	/* This QR Code symbol's version number, which is always between 1 and 40 (inclusive). */
-	private: int version;
+    public: const int version;
 	
 	/* The width and height of this QR Code symbol, measured in modules.
 	 * Always equal to version &times; 4 + 17, in the range 21 to 177. */
-	private: int size;
-	
-	/* The error correction level used in this QR Code symbol. */
-	private: Ecc errorCorrectionLevel;
+    public: const int size;
 	
 	/* The mask pattern used in this QR Code symbol, in the range 0 to 7 (i.e. unsigned 3-bit integer).
 	 * Note that even if a constructor was called with automatic masking requested
@@ -115,11 +124,12 @@ class QrCode final {
 	private: int mask;
 	
 	// Private grids of modules/pixels (conceptually immutable)
-	private: std::vector<std::vector<bool> > modules;     // The modules of this QR Code symbol (false = white, true = black)
-	private: std::vector<std::vector<bool> > isFunction;  // Indicates function modules that are not subjected to masking
-	
-	
-	
+    private: Matrix modules;     // The modules of this QR Code symbol (false = white, true = black)
+    private: Matrix isFunction;  // Indicates function modules that are not subjected to masking
+
+    /* The error correction level used in this QR Code symbol. */
+    private: Ecc errorCorrectionLevel;
+
 	/*---- Constructors ----*/
 	
 	/* 
@@ -128,7 +138,6 @@ class QrCode final {
 	 * To go one level up, see the encodeSegments() function.
 	 */
 	public: QrCode(int ver, Ecc ecl, const std::vector<std::uint8_t> &dataCodewords, int mask);
-	
 	
 	
 	/*---- Public instance methods ----*/
